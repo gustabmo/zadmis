@@ -1,4 +1,4 @@
-# zadmis
+# zadmis - still in development as of 2025-03-20
 
 by guexel@gmail.com = gustavo.exel@ersge.ch
 
