@@ -13,7 +13,7 @@ Setup:
   - the API key and API token - create a Trello power up and things should be straightforward from there
 2. on gmail, configure a filter that will put a label "zadmis-to-send" on the emails you want to go into Trello cards
 3. on the [AppsScript Google site script.google.com](https://script.google.com) create a new project named "zadmis"
-4. get [code.gs](https://github.com/gustabmo/zadmis/blob/main/code.gs) from the repository and copy/paste its contents into your appsscript project's Code.gs file.
+4. get [Code.gs](https://github.com/gustabmo/zadmis/blob/main/Code.gs) from the repository and copy/paste its contents into your appsscript project's Code.gs file.
 5. create a private.gs file (see [private-template.gs](https://github.com/gustabmo/zadmis/blob/main/private-template.gs) for a template) with the private info you got from Trello on the first step
 6. on the [AppsScript Google site](https://script.google.com), configure the zadmisSearchToSend() function to be run periodically (I used every 15 minutes)
 
