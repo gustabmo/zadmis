@@ -1,6 +1,6 @@
 function zadmisSearchToSend() {
   const labelToSend = GmailApp.getUserLabelByName('zadmis-to-send');
-  const labelWasSent = GmailApp.getUserLabelByName('zadmis-was-sent-v1');
+  const labelWasSent = GmailApp.getUserLabelByName('zadmis-sent-v1');
 
   const threadsToSend = labelToSend.getThreads(0,10);
 
@@ -8,42 +8,31 @@ function zadmisSearchToSend() {
     msgsToSend = thread.getMessages();
     msgsToSend.forEach ( (message) => {
       var description = parseHtml(message.getBody());
-      var cardName = trim(
-        description.get
-      );
+      var cardName;
 
-      let nom="";
-      let prenom="";
-      let dob = "";
-      let cardName = "";
+      var prenom = getInfo(description,"Pr[eé]nom");
+      var nom = getInfo(description,"Nom");
+      var dobst = getInfo(description,"Date de naissance");
 
-      try {
-        prenom = description.match(/^\s*Pr[eé]nom\s*:\s*(.*)$/mi)[1].trim();
-      } catch (error) {
-        prenom = '';
+      if (dobst != "") {
+        var dob = getDate(dob); 
       }
 
-      try {
-        nom = description.match(/^\s*Nom\s*:\s*(.*)$/mi)[1].trim();
-      } catch (error) {
-        nom = '';
-      }
-
-      try {
-        dob = description.match(/^\s*Date de naissance\s*:\s*(.*)$/mi)[1].trim();
-      } catch (error) {
-        dob = '';
-      }
-
-      if (cardName === "") {
+      if (prenom+nom+dob === "") {
         cardName = message.getSubject();
+      } else {
+        cardName = nom.toUpperCase()+" "+prenom+" "+dob;
       }
 
-
+      Logger.log ( "<<<  BODY >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+      // Logger.log ( message.getBody());
+      Logger.log ( "<<<  DESCRIP >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+      // Logger.log ( description);
       Logger.log ( "<<<"+message.getSubject()+">>>");
       Logger.log ( "<"+prenom+">" );
       Logger.log ( "<"+nom+">" );
-      Logger.log ( "<"+dob+">" );
+      Logger.log ( "dob st <"+dob+">" );
+      Logger.log ( "dob date <"+new Date(dob)+">" );
       Logger.log ( "<"+cardName+">" );
 
       if (1==2) UrlFetchApp.fetch(
@@ -53,9 +42,9 @@ function zadmisSearchToSend() {
           payload: {
             name: cardName,
             desc: description,
-            idList: PRIVATE_idList,
-            key: PRIVATE_APIkey,
-            token: PRIVATE_APItoken
+            idList: PRIVATE_Trello_idList,
+            key: PRIVATE_Trello_APIkey,
+            token: PRIVATE_Trello_APItoken
           }
         }
       );
@@ -72,4 +61,15 @@ function parseHtml(html) {
   var plainText = draftMsg.getMessage().getPlainBody();
   draftMsg.deleteDraft();
   return plainText;
+}
+
+function getInfo ( description, header ) {
+  var info;
+  match = description.match ( new RegExp("^\\s*"+header+"\\s*:\\s*(.*)$","mi") );
+  if ((match != null) && (match.length >= 2)) {
+    info = match[1].trim();
+    return info.trim().replace(/^\*/,"").replace(/\*$/,"").trim();
+  } else {
+    return "";
+  }
 }
