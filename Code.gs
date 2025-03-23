@@ -1,15 +1,20 @@
 function zadmisSearchToSend() {
   const labelToSend = GmailApp.getUserLabelByName('zadmis-to-send');
-  const labelWasSent = GmailApp.getUserLabelByName('zadmis-sent-v1');
+  const labelWasSent = getOrCreateGmailLabel('zadmis-sent-v1');
 
-  const threadsToSend = labelToSend.getThreads(0,10);
+  const threadsToSend = labelToSend==null ? [] : labelToSend.getThreads(0,10);
 
   let labelsTrello = null;
 
   threadsToSend.forEach( (thread) => {
+    let threadOk = true;
+
     msgsToSend = thread.getMessages();
     msgsToSend.forEach ( (message) => {
-      const description = parseHtml(message.getBody());
+      const description = 
+        message.getDate() + " " + message.getFrom() 
+        + "\n" + message.getPlainBody()
+      ;
       const info = getAllInfo ( description );
       const cardName = composeCardName ( message, info.prenom, info.nom, info.dobst );
       const year1stclass = getYear1stclass ( info.dobdate );
@@ -22,27 +27,19 @@ function zadmisSearchToSend() {
 
       const newCard = createNewCard ( cardName, description );
 
-      if (newCard != null) {
+      if (newCard == null) {
+        threadOk = false;
+      } else {
         addLabelToCard ( newCard.id, cardLabelId );
-
-        // labels gmail
       }
-    } );
-  } );
+    } ); // msgsToSend.forEach
+
+    if (threadOk) {
+      labelWasSent.addToThread(thread);
+      labelToSend.removeFromThread(thread);
+    }
+  } ); // threadsToSend.forEach
 } // zadmisSearchToSend()
-
-
-
-function parseHtml(html) {
-  // source: https://stackoverflow.com/questions/57117272/is-there-a-function-or-example-for-converting-html-string-to-plaintext-without-h
-  // by Sizerth
-  // very slow as all appsscript's that use google calls, but works very well
-
-  const draftMsg = GmailApp.createDraft('', 'zadmis To be deleted', '', { htmlBody: html });
-  const plainText = draftMsg.getMessage().getPlainBody();
-  draftMsg.deleteDraft();
-  return plainText;
-} // parseHtml()
 
 
 
@@ -319,5 +316,15 @@ function createNewCard ( cardName, description ) {
     return JSON.parse ( respAddCard.getContentText() );
   }
 } // createNewCard()
+
+
+
+function getOrCreateGmailLabel(name) {
+  let label = GmailApp.getUserLabelByName(name);
+  if (label == null) {
+    label = GmailApp.createLabel(name);
+  }
+  return label;
+} // getOrCreateGmailLabel()
 
 
