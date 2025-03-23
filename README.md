@@ -9,7 +9,7 @@ This implementation names the card with the email subject and uses the plain tex
 Setup:
 
 1. from Trello you'll need to get this information :
-  - the list id - easiest way is to open a Trello card in the list, click Share then Export JSON and search for "idlist"
+  - the list id and board id - easiest way is to open a Trello card in the list, click Share then Export JSON and search for "idlist" and "idboard"
   - the API key and API token - create a Trello power up and things should be straightforward from there
 2. on gmail, configure a filter that will put a label "zadmis-to-send" on the emails you want to go into Trello cards
 3. on the [AppsScript Google site script.google.com](https://script.google.com) create a new project named "zadmis"
