@@ -10,11 +10,9 @@ function zadmisSearchToSend() {
     msgsToSend = thread.getMessages();
     msgsToSend.forEach ( (message) => {
       const description = parseHtml(message.getBody());
-
-      const ( prenom, nom, dobst, dobdate ) = getAllInfo ( description );
-
-      const cardName = composeCardName ( message, prenom, nom, dobst );
-      const year1stclass = getYear1stclass ( dobdate );
+      const info = getAllInfo ( description );
+      const cardName = composeCardName ( message, info.prenom, info.nom, info.dobst );
+      const year1stclass = getYear1stclass ( info.dobdate );
 
       if (labelsTrello == null) {
         labelsTrello = getBoardLabels();
@@ -31,7 +29,7 @@ function zadmisSearchToSend() {
       }
     } );
   } );
-}
+} // zadmisSearchToSend()
 
 
 
@@ -44,7 +42,7 @@ function parseHtml(html) {
   const plainText = draftMsg.getMessage().getPlainBody();
   draftMsg.deleteDraft();
   return plainText;
-}
+} // parseHtml()
 
 
 
@@ -60,7 +58,7 @@ function getInfo ( description, header ) {
   } else {
     return "";
   }
-}
+} // getInfo()
 
 
 
@@ -74,8 +72,8 @@ function getAllInfo ( description ) {
     dobst = dobdate.toISOString().substring(0,10);
   }
 
-  return ( prenom, nom, dobst, dobdate );
-}
+  return { prenom:prenom, nom:nom, dobst:dobst, dobdate:dobdate };
+} // getAllInfo()
 
 
 
@@ -185,7 +183,7 @@ function getBoardLabels() {
     Logger.log ( "error reading list of labels" );
     return null;
   }
-}
+} // getBoardLabels()
 
 
 
@@ -195,7 +193,7 @@ function composeCardName ( message, prenom, nom, dobst ) {
   } else {
     return (nom.toUpperCase()+" "+prenom+" "+dobst).trim();
   }
-}
+} // composeCardName()
 
 
 
@@ -320,6 +318,6 @@ function createNewCard ( cardName, description ) {
   } else {
     return JSON.parse ( respAddCard.getContentText() );
   }
-}
+} // createNewCard()
 
 
