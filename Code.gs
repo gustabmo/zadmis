@@ -4,41 +4,39 @@ function zadmisSearchToSend() {
 
   const threadsToSend = labelToSend.getThreads(0,10);
 
+  let labels = null;
+
   threadsToSend.forEach( (thread) => {
     msgsToSend = thread.getMessages();
     msgsToSend.forEach ( (message) => {
-      var description = parseHtml(message.getBody());
-      var cardName;
+      const description = parseHtml(message.getBody());
+      let cardLabel;
 
-      var prenom = getInfo(description,"Pr[eé]nom");
-      var nom = getInfo(description,"Nom");
-      var dobst = getInfo(description,"Date de naissance");
+      const prenom = getInfo(description,"Pr[eé]nom");
+      const nom = getInfo(description,"Nom");
+      let dobst = getInfo(description,"Date de naissance");
+      const dobdate = getDateFromFormSt(dobst);
 
-      if (dobst != "") {
-        var dob = getDate(dob); 
+      if (dobdate != null) {
+        dobst = dobdate.toISOString().substring(0,10);
       }
 
-      if (prenom+nom+dob === "") {
-        cardName = message.getSubject();
-      } else {
-        cardName = nom.toUpperCase()+" "+prenom+" "+dob;
+      const cardName = composeCardName ( message, prenom, nom, dobst );
+      const year1stclass = getYear1stclass ( dobdate );
+
+      if (labels == null) {
+        labels = getBoardLabels();
+      } 
+
+      if (labels != null) {
+        cardLabelId = getCardLabel ( labels, year1stclass );
       }
 
-      Logger.log ( "<<<  BODY >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-      // Logger.log ( message.getBody());
-      Logger.log ( "<<<  DESCRIP >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-      // Logger.log ( description);
-      Logger.log ( "<<<"+message.getSubject()+">>>");
-      Logger.log ( "<"+prenom+">" );
-      Logger.log ( "<"+nom+">" );
-      Logger.log ( "dob st <"+dob+">" );
-      Logger.log ( "dob date <"+new Date(dob)+">" );
-      Logger.log ( "<"+cardName+">" );
-
-      if (1==2) UrlFetchApp.fetch(
+      const respAddCard = UrlFetchApp.fetch(
         "https://api.trello.com/1/cards", 
         {
           method: "post",
+          muteHttpExceptions: true,
           payload: {
             name: cardName,
             desc: description,
@@ -48,28 +46,227 @@ function zadmisSearchToSend() {
           }
         }
       );
+      if (respAddCard.getResponseCode() != 200) {
+        Logger.log ( "Error creating card "+cardName+" "+message.getSubject() );
+      } else {
+        newCard = JSON.parse ( respAddCard.getContentText() );
+
+        const respAddLabelToCard = UrlFetchApp.fetch (
+          "https://api.trello.com/1/cards/"+newCard.id+"/idLabels", 
+          {
+            method: "post",
+            muteHttpExceptions: true,
+            payload: {
+              value : cardLabelId,
+              key: PRIVATE_Trello_APIkey,
+              token: PRIVATE_Trello_APItoken
+            }
+          }
+        );
+        if (respAddLabelToCard.getResponseCode() != 200) {
+          Logger.log ( "error adding label "+cardLabelId
+            +" to card "+newCard.id
+            +" error "+respAddLabelToCard.getResponseCode()
+            +" "+respAddLabelToCard.getContentText() 
+          );
+        }
+
+        // labels gmail
+      }
     } );
   } );
 }
+
 
 function parseHtml(html) {
   // source: https://stackoverflow.com/questions/57117272/is-there-a-function-or-example-for-converting-html-string-to-plaintext-without-h
   // by Sizerth
   // very slow as all appsscript's that use google calls, but works very well
 
-  var draftMsg = GmailApp.createDraft('', 'zadmis To be deleted', '', { htmlBody: html });
-  var plainText = draftMsg.getMessage().getPlainBody();
+  const draftMsg = GmailApp.createDraft('', 'zadmis To be deleted', '', { htmlBody: html });
+  const plainText = draftMsg.getMessage().getPlainBody();
   draftMsg.deleteDraft();
   return plainText;
 }
 
+
 function getInfo ( description, header ) {
-  var info;
   match = description.match ( new RegExp("^\\s*"+header+"\\s*:\\s*(.*)$","mi") );
   if ((match != null) && (match.length >= 2)) {
-    info = match[1].trim();
-    return info.trim().replace(/^\*/,"").replace(/\*$/,"").trim();
+    return match[1]
+      .trim()
+      .replace(/^\*/,"")
+      .replace(/\*$/,"")
+      .trim()
+    ;
   } else {
     return "";
   }
 }
+
+
+function getDateFromFormSt ( st ) {
+  const tokens = st.match ( /\s*([^\s]*)\s*/g );
+  let day=0;
+  let month=0;
+  let year=0;
+  let newmonth;
+  let tok;
+  let v;
+  let error = false;
+
+  for (i in tokens) if (!error) {
+    tok = tokens[i]
+      .trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')  // remove accents
+      .toUpperCase()
+    ;
+
+    newmonth = 0;
+    if (
+      (tok === "LUNDI") || (tok === "MARDI") || (tok === "MERCREDI") || (tok === "JEUDI") 
+      || 
+      (tok === "VENDREDI") || (tok === "SAMEDI") || (tok === "DIMANCHE") 
+      ||
+      (tok === "MONDAY") || (tok === "TUESDAY") || (tok === "WEDNESDAY") || (tok === "THURSDAY") 
+      || 
+      (tok === "FRIDAY") || (tok === "SATURDAY") || (tok === "SUNDAY") 
+      || 
+      (tok === "MON") || (tok === "TUE") || (tok === "WED") || (tok === "THU") 
+      || 
+      (tok === "FRI") || (tok === "SAT") || (tok === "SUN") 
+      ||
+      (tok === "12H00") || (tok === "")
+    ) {
+      // ignore
+    } else if ((tok == "JAN") || (tok == "JANVIER") || (tok == "JANUARY")) { newmonth = 1
+    } else if ((tok == "FEV") || (tok == "FEVRIER") || (tok == "FEB") || (tok == "FEBRUARY")) { newmonth = 2
+    } else if ((tok == "MAR") || (tok == "MARS") || (tok == "MARCH")) { newmonth = 3
+    } else if ((tok == "AVR") || (tok == "AVRIL") || (tok == "APR") || (tok == "APRIL")) { newmonth = 4
+    } else if ((tok == "MAI") || (tok == "MAY")) { newmonth = 5
+    } else if ((tok == "JUIN") || (tok == "JUN") || (tok == "JUNE")) { newmonth = 6
+    } else if ((tok == "JUIL") || (tok == "JUILLET") || (tok == "JUL") || (tok == "JULY")) { newmonth = 7
+    } else if ((tok == "AOU") || (tok == "AOUT") || (tok == "AUG") || (tok == "AUGUST")) { newmonth = 8
+    } else if ((tok == "SEP") || (tok == "SEPTEMBRE") || (tok == "SEPTEMBER")) { newmonth = 9
+    } else if ((tok == "OCT") || (tok == "OCTOBRE") || (tok == "OCTOBER")) { newmonth = 10
+    } else if ((tok == "NOV") || (tok == "NOVEMBRE") || (tok == "NOVEMBER")) { newmonth = 11
+    } else if ((tok == "DEC") || (tok == "DECEMBRE") || (tok == "DECEMBER")) { newmonth = 12
+    } else {
+      v = Number(tok);
+      if ((v != null) && (v>0) && (v==Math.floor(v))) {
+        if ((v>=1) && (v<=31)) {
+          if (day == 0) {
+            day = v;
+          } else {
+            error = true;
+          }
+        } else if ((v>=1800) && (v<=4000)) {
+          if (year == 0) {
+            year = v;
+          } else {
+            error = true;
+          }
+        } else {
+          error = true;
+        }
+      } else {
+        error = true;
+      }
+    }
+
+    if ((!error) && (newmonth != 0)) {
+      if (month == 0) {
+        month = newmonth;
+      } else {
+        error = true;
+      }
+    }
+  }
+
+  if (error) {
+    return null
+  } else {
+    try {
+      return new Date ( Date.UTC ( year,month-1,day ) );
+    } catch (e) {
+      return null;
+    }
+  }
+} // getDateFromFormSt()
+
+
+
+
+function getBoardLabels() {
+  const response = UrlFetchApp.fetch(
+    "https://api.trello.com/1/boards/"+PRIVATE_Trello_idBoard
+    +"/labels?key="+PRIVATE_Trello_APIkey
+    +"&token="+PRIVATE_Trello_APItoken,
+    {
+      muteHttpExceptions: true,
+    }
+  );
+  if (response.getResponseCode() == 200) {
+    return JSON.parse ( response.getContentText() );
+  } else {
+    Logger.log ( "error reading list of labels" );
+    return null;
+  }
+}
+
+
+function composeCardName ( message, prenom, nom, dobst ) {
+  if (prenom+nom+dobst === "") {
+    return message.getSubject();
+  } else {
+    return (nom.toUpperCase()+" "+prenom+" "+dobst).trim();
+  }
+}
+
+
+function getYear1stclass ( dobdate ) {
+  let year1stclass = null;
+  if (dobdate != null) {
+    year1stclass = dobdate.getUTCFullYear() + 6;
+    if ((dobdate.getUTCMonth()+1) >= 8) {
+      year1stclass++;
+    }
+  }
+  return year1stclass;
+}
+
+
+function getCardLabel ( labels, year1stclass ) {
+  for ( i=0; i<labels.length; i++ ) {
+    if (labels[i].name.match(year1stclass)) {
+      return labels[i].id;
+    }   
+  }
+
+  const nameNewLabel = "class xx "+year1stclass;
+  Logger.log ( "creating label "+nameNewLabel );
+  const response = UrlFetchApp.fetch(
+    "https://api.trello.com/1/labels/",
+    {
+      muteHttpExceptions: true,
+      method: "post",
+      payload: {
+        name : nameNewLabel,
+        color : "yellow",
+        idBoard : PRIVATE_Trello_idBoard,
+        key: PRIVATE_Trello_APIkey,
+        token: PRIVATE_Trello_APItoken
+      }
+    }
+  );
+  if (response.getResponseCode() == 200) {
+    const newLabel = JSON.parse ( response.getContentText() );
+    labels.push ( newLabel );
+    return newLabel.id;
+  } else {
+    Logger.log ( "error creating label "+nameNewLabel );
+    return null;
+  }
+}
+
+
