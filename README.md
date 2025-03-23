@@ -19,7 +19,7 @@ Setup:
 
 When the script runs, it will find the emails with a zadmis-to-send label, upload each of them to Trello, and change the label to zadmis-sent-v1 (change the label means remove one and add the other).
 
-Once installed and configured, you can go back to previous emails that you'd like to transform into Trello cards, add the zadmis-to-send label and wait for the next iteration.
+Once installed and configured, if you wish to post to Trello some old emails, you can just add the zadmis-to-send label to them and wait for the next iteration.
 
 ----
 History:
