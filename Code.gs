@@ -4,78 +4,35 @@ function zadmisSearchToSend() {
 
   const threadsToSend = labelToSend.getThreads(0,10);
 
-  let labels = null;
+  let labelsTrello = null;
 
   threadsToSend.forEach( (thread) => {
     msgsToSend = thread.getMessages();
     msgsToSend.forEach ( (message) => {
       const description = parseHtml(message.getBody());
-      let cardLabel;
 
-      const prenom = getInfo(description,"Pr[eé]nom");
-      const nom = getInfo(description,"Nom");
-      let dobst = getInfo(description,"Date de naissance");
-      const dobdate = getDateFromFormSt(dobst);
-
-      if (dobdate != null) {
-        dobst = dobdate.toISOString().substring(0,10);
-      }
+      const ( prenom, nom, dobst, dobdate ) = getAllInfo ( description );
 
       const cardName = composeCardName ( message, prenom, nom, dobst );
       const year1stclass = getYear1stclass ( dobdate );
 
-      if (labels == null) {
-        labels = getBoardLabels();
+      if (labelsTrello == null) {
+        labelsTrello = getBoardLabels();
       } 
 
-      if (labels != null) {
-        cardLabelId = getCardLabel ( labels, year1stclass );
-      }
+      const cardLabelId = getCardLabel ( labelsTrello, year1stclass );
 
-      const respAddCard = UrlFetchApp.fetch(
-        "https://api.trello.com/1/cards", 
-        {
-          method: "post",
-          muteHttpExceptions: true,
-          payload: {
-            name: cardName,
-            desc: description,
-            idList: PRIVATE_Trello_idList,
-            key: PRIVATE_Trello_APIkey,
-            token: PRIVATE_Trello_APItoken
-          }
-        }
-      );
-      if (respAddCard.getResponseCode() != 200) {
-        Logger.log ( "Error creating card "+cardName+" "+message.getSubject() );
-      } else {
-        newCard = JSON.parse ( respAddCard.getContentText() );
+      const newCard = createNewCard ( cardName, description );
 
-        const respAddLabelToCard = UrlFetchApp.fetch (
-          "https://api.trello.com/1/cards/"+newCard.id+"/idLabels", 
-          {
-            method: "post",
-            muteHttpExceptions: true,
-            payload: {
-              value : cardLabelId,
-              key: PRIVATE_Trello_APIkey,
-              token: PRIVATE_Trello_APItoken
-            }
-          }
-        );
-        if (respAddLabelToCard.getResponseCode() != 200) {
-          Logger.log ( "error adding label "+cardLabelId
-            +" to card "+newCard.id
-            +" error "+respAddLabelToCard.getResponseCode()
-            +" "+respAddLabelToCard.getContentText() 
-          );
-        }
+      if (newCard != null) {
+        addLabelToCard ( newCard.id, cardLabelId );
 
         // labels gmail
       }
     } );
   } );
 }
+
 
 
 function parseHtml(html) {
@@ -88,6 +45,7 @@ function parseHtml(html) {
   draftMsg.deleteDraft();
   return plainText;
 }
+
 
 
 function getInfo ( description, header ) {
@@ -103,6 +61,22 @@ function getInfo ( description, header ) {
     return "";
   }
 }
+
+
+
+function getAllInfo ( description ) {
+  const prenom = getInfo(description,"Pr[eé]nom");
+  const nom = getInfo(description,"Nom");
+  let dobst = getInfo(description,"Date de naissance");
+  const dobdate = getDateFromFormSt(dobst);
+
+  if (dobdate != null) {
+    dobst = dobdate.toISOString().substring(0,10);
+  }
+
+  return ( prenom, nom, dobst, dobdate );
+}
+
 
 
 function getDateFromFormSt ( st ) {
@@ -196,7 +170,6 @@ function getDateFromFormSt ( st ) {
 
 
 
-
 function getBoardLabels() {
   const response = UrlFetchApp.fetch(
     "https://api.trello.com/1/boards/"+PRIVATE_Trello_idBoard
@@ -215,6 +188,7 @@ function getBoardLabels() {
 }
 
 
+
 function composeCardName ( message, prenom, nom, dobst ) {
   if (prenom+nom+dobst === "") {
     return message.getSubject();
@@ -222,6 +196,7 @@ function composeCardName ( message, prenom, nom, dobst ) {
     return (nom.toUpperCase()+" "+prenom+" "+dobst).trim();
   }
 }
+
 
 
 function getYear1stclass ( dobdate ) {
@@ -233,19 +208,30 @@ function getYear1stclass ( dobdate ) {
     }
   }
   return year1stclass;
-}
+} // getYear1stclass()
+
 
 
 function getCardLabel ( labels, year1stclass ) {
+  // do I have a list of labels?
+  if (labels == null) {
+    return null;
+  }
+
+  // search among existing labels
   for ( i=0; i<labels.length; i++ ) {
     if (labels[i].name.match(year1stclass)) {
       return labels[i].id;
     }   
   }
 
-  const nameNewLabel = "class xx "+year1stclass;
-  Logger.log ( "creating label "+nameNewLabel );
-  const response = UrlFetchApp.fetch(
+  return createCardLabel ( labels, "class xx "+year1stclass );
+} // getCardLabel()
+
+
+
+function createCardLabel ( labels, nameNewLabel ) {
+  const respCreateLabel = UrlFetchApp.fetch(
     "https://api.trello.com/1/labels/",
     {
       muteHttpExceptions: true,
@@ -259,13 +245,80 @@ function getCardLabel ( labels, year1stclass ) {
       }
     }
   );
-  if (response.getResponseCode() == 200) {
-    const newLabel = JSON.parse ( response.getContentText() );
+
+  if (respCreateLabel.getResponseCode() == 200) {
+    const newLabel = JSON.parse ( respCreateLabel.getContentText() );
     labels.push ( newLabel );
+    Logger.log ( "created label "+nameNewLabel+" "+newLabel.id );
     return newLabel.id;
   } else {
-    Logger.log ( "error creating label "+nameNewLabel );
+    Logger.log ( "error creating label "+nameNewLabel 
+      +" error:"+respCreateLabel.getResponseCode()
+      +" "+respCreateLabel.getContentText()
+    );
     return null;
+  }
+} // createCardLabel()
+
+
+
+function addLabelToCard ( cardId, labelId ) {
+  let result = false;
+
+  if (labelId != null) {
+    const respAddLabelToCard = UrlFetchApp.fetch (
+      "https://api.trello.com/1/cards/"+cardId+"/idLabels", 
+      {
+        method: "post",
+        muteHttpExceptions: true,
+        payload: {
+          value : labelId,
+          key: PRIVATE_Trello_APIkey,
+          token: PRIVATE_Trello_APItoken
+        }
+      }
+    );
+
+    if (respAddLabelToCard.getResponseCode() == 200) {
+      result = true;
+    } else {
+      Logger.log ( "error adding label "+labelId
+        +" to card "+cardId
+        +" error "+respAddLabelToCard.getResponseCode()
+        +" "+respAddLabelToCard.getContentText() 
+      );
+    }
+  }
+
+  return result;
+} // addLabelToCard()
+
+
+
+function createNewCard ( cardName, description ) {
+  const respAddCard = UrlFetchApp.fetch(
+    "https://api.trello.com/1/cards", 
+    {
+      method: "post",
+      muteHttpExceptions: true,
+      payload: {
+        name: cardName,
+        desc: description,
+        idList: PRIVATE_Trello_idList,
+        key: PRIVATE_Trello_APIkey,
+        token: PRIVATE_Trello_APItoken
+      }
+    }
+  );
+  
+  if (respAddCard.getResponseCode() != 200) {
+    Logger.log ( "Error creating card "+cardName 
+      +" error:"+respAddCard.getResponseCode()
+      +" "+respAddCard.getContentText()
+    );
+    return null;
+  } else {
+    return JSON.parse ( respAddCard.getContentText() );
   }
 }
 
