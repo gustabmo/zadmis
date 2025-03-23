@@ -2,7 +2,7 @@
 
 by guexel@gmail.com = gustavo.exel@ersge.ch
 
-A project to create Trello cards from emails received over gmail
+A Goole AppsScript project to create Trello cards from emails received over gmail
 
 This implementation names the card with the email subject and uses the plain text of the email body as it's description. Actually, it tries some manipulation that will work in my specific use case (admission forms filled on Ecole Rudolf Steiner de Geneve web site) but most probably this manipulation will fail in any other use case, which will revert to the standard subject->name and body->description rule. You can most probably modify the manipulation to fit your case.
 
