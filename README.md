@@ -21,5 +21,6 @@ When the script runs, it will find the emails with a zadmis-to-send label, uploa
 
 Once installed and configured, you can go back to previous emails that you'd like to transform into Trello cards, add the zadmis-to-send label and wait for the next iteration.
 
+----
 History:
-2025-03-23 first working version
+- 2025-03-23 first working version
