@@ -185,7 +185,7 @@ function getBoardLabels() {
 
 
 function composeCardName ( message, prenom, nom, dobst ) {
-  if (prenom+nom+dobst === "") {
+  if ((prenom+nom === "") && (!(dobst instanceof Date) || (dobst < new Date(1970,1,1)))) {
     return message.getSubject();
   } else {
     return (nom.toUpperCase()+" "+prenom+" "+dobst).trim();
