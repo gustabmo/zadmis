@@ -5,3 +5,5 @@ const PRIVATE_Trello_idList = "xxxx";
 const PRIVATE_Trello_idBoard = "xxxx";
 const PRIVATE_Trello_APIkey = "xxxx";
 const PRIVATE_Trello_APItoken = "xxxx";
+const PRIVATE_GSheets_Summary = "xxxx";
+const PRIVATE_GSheets_Summary_List_Dont_Show = "xxxx";
