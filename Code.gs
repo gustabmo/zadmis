@@ -201,6 +201,9 @@ function getYear1stclass ( dobdate ) {
     if ((dobdate.getUTCMonth()+1) >= 8) {
       year1stclass++;
     }
+    if (year1stclass < 1980) {
+      year1stclass = null;
+    }
   }
   return year1stclass;
 } // getYear1stclass()
@@ -210,6 +213,10 @@ function getYear1stclass ( dobdate ) {
 function getCardLabel ( labels, year1stclass ) {
   // do I have a list of labels?
   if (labels == null) {
+    return null;
+  }
+
+  if ((year1stclass == null) || (year1stclass < 1980)) {
     return null;
   }
 
@@ -326,5 +333,4 @@ function getOrCreateGmailLabel(name) {
   }
   return label;
 } // getOrCreateGmailLabel()
-
 
