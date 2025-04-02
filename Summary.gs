@@ -1,3 +1,4 @@
+
 function writeSummaryListOnSheet() {
   let error = "";
   let row = { r : 1 }; // must be object to be passed as reference
@@ -57,6 +58,18 @@ function writeSummaryListOnSheet() {
     } );
   }
 
+  if (error == "") {
+    sheet.getRange(row.r,4)
+      .setValue ( "---")
+      .setFontWeight('normal')
+    ;
+    row.r++;
+    row.r++;
+    if (!summarizeLabels ( sheet, row, labels )) {
+      error = "error listing labels";
+    }
+  }
+
   if (error != "") {
     Logger.log ( "error: "+error );
   }
@@ -85,19 +98,27 @@ function summarizeCards ( sheet, row, labels, listId ) {
   if ((cards == null) || (cards.getResponseCode() != 200)) {
     result = false;
   } else {
-    JSON.parse ( cards.getContentText() ).forEach ( (card) => {
-      sheet.getRange(row.r,1).setValue(new Date ( card.dateLastActivity ));
-      stLabels = "";
-      card.idLabels.forEach ( (idLabel) => 
-        stLabels += getLabelName ( idLabel, labels ) + " " 
-      );
-      sheet.getRange(row.r,3).setValue ( stLabels.trim() );
-      sheet.getRange(row.r,4)
-        .setValue(card.name)
-        .setFontWeight('normal')
-      ;
-      row.r++;
-    } );
+    JSON.parse ( cards.getContentText() )
+      .sort(compareCardsByName)
+      .forEach ( (card) => {
+        sheet.getRange(row.r,1).setValue(new Date ( card.dateLastActivity ));
+        stLabels = "";
+        card.idLabels.forEach ( (idLabel) => 
+          stLabels += getLabelName ( idLabel, labels ) + " " 
+        );
+        sheet.getRange(row.r,3).setValue ( stLabels.trim() );
+        sheet.getRange(row.r,4)
+          .setRichTextValue(
+            SpreadsheetApp.newRichTextValue()
+              .setText(card.name)
+              .setLinkUrl(card.url)
+              .build()
+          )
+          .setFontWeight('normal')
+        ;
+        row.r++;
+      } )
+    ;
     row.r++;
   }
 
@@ -112,4 +133,46 @@ function getLabelName ( labelId, labels ) {
   } else {
     return "";
   }
+}
+
+
+function compareCardsByName ( a, b ) {
+  if (a.name < b.name) return -1;
+  if (a.name === b.name) return 0;
+  return +1;
+}
+
+
+function compareLabels ( a, b ) {
+  let aWords = a.name.split(" ");
+  let bWords = b.name.split(" ");
+  let aLast = aWords.length>=1 ? aWords[aWords.length-1] : "zzzz";
+  let bLast = bWords.length>=1 ? bWords[bWords.length-1] : "zzzz";
+
+  if (aLast < bLast) return +1;
+  if (aLast === bLast) return 0;
+  return -1;
+}
+
+
+function summarizeLabels ( sheet, row, labels ) {
+  labels
+    .sort(compareLabels)
+    .forEach ( (label) => {
+      sheet.getRange(row.r,3)
+        .setRichTextValue(
+          SpreadsheetApp.newRichTextValue()
+            .setText(label.name)
+            .setLinkUrl(
+              "https://trello.com/b/WLDAl4MM/admissions?filter=label:"
+              +encodeURI(label.name)
+            )
+            .build()
+        )
+      ;
+      row.r++;
+    })
+  ;
+  row.r++;
+  return true;
 }
