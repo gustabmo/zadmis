@@ -4,7 +4,7 @@ by guexel@gmail.com = gustavo.exel@ersge.ch
 
 A Goole AppsScript project to create Trello cards from emails received over gmail, and to summarize the board's cards in a Google Sheet
 
-This implementation names the card with the email subject and uses the plain text of the email body as it's description. Actually, it tries some manipulation that will work in my specific use case (admission forms filled on Ecole Rudolf Steiner de Geneve web site) but most probably this manipulation will fail in any other use case, which will revert to the standard subject->name and body->description rule. You can most probably modify the manipulation to fit your case.
+This implementation names the card with the email subject and uses the plain text of the email body as it's description. Actually, it tries to build the card name from the description in a way that works in my specific use case (admission forms filled on Ecole Rudolf Steiner de Geneve ersge.ch web site) but most probably will fail in any other use case, and revert to the standard subject->name and body->description rule. You can most probably modify the manipulation (function composeCardName) to fit your case.
 
 Setup:
 
