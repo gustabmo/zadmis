@@ -112,6 +112,12 @@ function summarizeCards ( sheet, row, labels, listId ) {
             SpreadsheetApp.newRichTextValue()
               .setText(card.name)
               .setLinkUrl(card.url)
+              .setTextStyle(
+                SpreadsheetApp.newTextStyle()
+                  .setForegroundColor("black")
+                  .setUnderline(false)
+                  .build()
+              )
               .build()
           )
           .setFontWeight('normal')
