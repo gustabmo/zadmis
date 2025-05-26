@@ -83,9 +83,81 @@ function writeSummaryListOnSheet() {
 }
 
 
+function getTextField ( line, header ) {
+  line = line.trim();
+  if (line.startsWith(header)) {
+    return line.substr(header.length).trim();
+  } else {
+    return "";
+  }
+}
+
+
+function filterPhone ( st ) {
+  let result="";
+  for ( ch in st ) {
+    if (ch in ['-','+','0'..'9']) {
+      result += ch;
+    }
+  }
+  return result;
+}
+
+
+
+function summarizeOneCard ( card, sheet, row, labels ) {
+  sheet.getRange(row.r,1).setValue(new Date ( card.dateLastActivity ));
+
+  let stLabels = "";
+  card.idLabels.forEach ( (idLabel) => 
+    stLabels += getLabelName ( idLabel, labels ) + " " 
+  );
+  sheet.getRange(row.r,3).setValue ( stLabels.trim() );
+
+  sheet.getRange(row.r,4)
+    .setRichTextValue(
+      SpreadsheetApp.newRichTextValue()
+        .setText(card.name)
+        .setLinkUrl(card.url)
+        .setTextStyle(
+          SpreadsheetApp.newTextStyle()
+            .setForegroundColor("black")
+            .setUnderline(false)
+            .build()
+        )
+        .build()
+    )
+    .setFontWeight('normal')
+  ;
+
+  sheet.getRange(row.r,5).setValue ( new Date ( card.due ) );
+
+  let stEmails = "";
+  let stPhones = "";
+  let onePhone = "";
+  let lastIndicatif = "";
+  let oneIndicatif = "";
+  card.desc.split ( "\n" ).forEach ( (line) => {
+    stEmails = (stEmails + " " + getTextField(line,"Email :")).trim();
+    oneIndicatif = getTextField(line,"Indicatif :");
+    if (oneIndicatif != "") {
+      lastIndicatif = filterNumbers(oneIndicatif);
+    }
+    onePhone = getTextField(line,"Téléphone mobile :");
+    if (onePhone != "") {
+      stPhones += (stPhones + "  "+lastIndicatif+onePhone).trim();
+    }
+  } )
+
+  sheet.getRange(row.r,6).setValue ( stEmails );
+  sheet.getRange(row.r,7).setValue ( stPhones );
+
+  row.r++;
+}
+
+
 function summarizeCards ( sheet, row, labels, listId ) {
   let result = true;
-  let stLabels;
 
   const cards = UrlFetchApp.fetch(
     "https://api.trello.com/1/lists/"+listId
@@ -100,30 +172,7 @@ function summarizeCards ( sheet, row, labels, listId ) {
   } else {
     JSON.parse ( cards.getContentText() )
       .sort(compareCardsByName)
-      .forEach ( (card) => {
-        sheet.getRange(row.r,1).setValue(new Date ( card.dateLastActivity ));
-        stLabels = "";
-        card.idLabels.forEach ( (idLabel) => 
-          stLabels += getLabelName ( idLabel, labels ) + " " 
-        );
-        sheet.getRange(row.r,3).setValue ( stLabels.trim() );
-        sheet.getRange(row.r,4)
-          .setRichTextValue(
-            SpreadsheetApp.newRichTextValue()
-              .setText(card.name)
-              .setLinkUrl(card.url)
-              .setTextStyle(
-                SpreadsheetApp.newTextStyle()
-                  .setForegroundColor("black")
-                  .setUnderline(false)
-                  .build()
-              )
-              .build()
-          )
-          .setFontWeight('normal')
-        ;
-        row.r++;
-      } )
+      .forEach ( (card) => summarizeOneCard ( card, sheet, row, labels ) )
     ;
     row.r++;
   }
