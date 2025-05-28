@@ -1,5 +1,6 @@
 
 function writeSummaryListOnSheet() {
+
   let error = "";
   let row = { r : 1 }; // must be object to be passed as reference
   let response = null;
@@ -19,6 +20,17 @@ function writeSummaryListOnSheet() {
     sheet.getRange(row.r,1).setValue("dernière modif");
     sheet.getRange(row.r,3).setValue("classe");
     sheet.getRange(row.r,4).setValue("élève et date de naissance");
+    sheet.getRange(row.r,5).setValue("naissance");
+    sheet.getRange(row.r,6).setValue("entrée");
+    sheet.getRange(row.r,7).setValue("rdv péd");
+    sheet.getRange(row.r,8).setValue("stage de");
+    sheet.getRange(row.r,9).setValue("stage à");
+    sheet.getRange(row.r,10).setValue("ok péd");
+    sheet.getRange(row.r,11).setValue("EA");
+    sheet.getRange(row.r,12).setValue("ok fin");
+    sheet.getRange(row.r,13).setValue("emails");
+    sheet.getRange(row.r,14).setValue("téléphones");
+    sheet.getRange(row.r,15).setValue("alarme");
     row.r++;
     row.r++;
   }
@@ -85,6 +97,9 @@ function writeSummaryListOnSheet() {
 
 function getTextField ( line, header ) {
   line = line.trim();
+  if ((line.length >= 2) && line[0] == "*" && line[line.length-1] == "*") {
+    line = line.substr(1,line.length-2);
+  }
   if (line.startsWith(header)) {
     return line.substr(header.length).trim();
   } else {
@@ -95,14 +110,60 @@ function getTextField ( line, header ) {
 
 function filterPhone ( st ) {
   let result="";
-  for ( ch in st ) {
-    if (ch in ['-','+','0'..'9']) {
+  let ch;
+  for ( ch of st ) {
+    if (ch.match(/[\-+0-9]/g)) {
       result += ch;
     }
   }
   return result;
 }
 
+
+function textToDateIfPossible ( st ) {
+  if (st == "") return null;
+
+  return st;
+
+  let result = new Date ( st );
+  if (result) {
+    return result;
+  } else {
+    return st;
+  }
+}
+
+
+function processEntryDate ( st ) {
+  if (st=="") return null;
+
+  if (st=="lundi 18 Août 2025 12h00") st = "Rentrée 2025";
+  if (st=="lundi 25 Août 2025 12h00") st = "Rentrée 2025";
+  if (st=="lundi 1 Sep 2025 12h00") st = "Rentrée 2025";
+
+  if (st=="lundi 17 Août 2026 12h00") st = "Rentrée 2026";
+
+  st = st.replace ( "Rentrée Août ", "Rentrée ");
+
+  st = st.replace ( " 12h00", "" );
+
+  st = st.replace ( "samedi ", "" );
+  st = st.replace ( "dimanche ", "" );
+  st = st.replace ( "lundi ", "" );
+  st = st.replace ( "mardi ", "" );
+  st = st.replace ( "mercredi ", "" );
+  st = st.replace ( "jeudi ", "" );
+  st = st.replace ( "vendredi ", "" );
+
+  st = st.replace ( " Fév ", " Feb " );
+  st = st.replace ( " Avr ", " Apr " );
+  st = st.replace ( " Mai ", " May " );
+  st = st.replace ( " Juin ", " Jun " );
+  st = st.replace ( " Juil ", " Jul " );
+  st = st.replace ( " Août ", " Aug " );
+
+  return st;
+}
 
 
 function summarizeOneCard ( card, sheet, row, labels ) {
@@ -130,27 +191,45 @@ function summarizeOneCard ( card, sheet, row, labels ) {
     .setFontWeight('normal')
   ;
 
-  sheet.getRange(row.r,5).setValue ( new Date ( card.due ) );
-
   let stEmails = "";
   let stPhones = "";
-  let onePhone = "";
   let lastIndicatif = "";
-  let oneIndicatif = "";
+  let dateNaissance = null;
+  let dateEP = "";
+  let dateEntree = "";
+  let okPedagogique = "";
+  let dateEA = "";
+  let stageDe = "";
+  let stageA = "";
+  let okFinancier = "";
+  let temp;
   card.desc.split ( "\n" ).forEach ( (line) => {
-    stEmails = (stEmails + " " + getTextField(line,"Email :")).trim();
-    oneIndicatif = getTextField(line,"Indicatif :");
-    if (oneIndicatif != "") {
-      lastIndicatif = filterNumbers(oneIndicatif);
-    }
-    onePhone = getTextField(line,"Téléphone mobile :");
-    if (onePhone != "") {
-      stPhones += (stPhones + "  "+lastIndicatif+onePhone).trim();
-    }
+    if (temp = getTextField(line,"Email :")) stEmails += (stEmails==""?"":", ") + temp;
+    if (temp = getTextField(line,"Indicatif :")) lastIndicatif = filterPhone(temp);
+    if (temp = getTextField(line,"Téléphone mobile :")) stPhones = (stPhones + "  "+lastIndicatif+temp).trim();
+    if (temp = textToDateIfPossible(getTextField(line,"date-EP :"))) dateEP = temp;
+    if (temp = textToDateIfPossible(getTextField(line,"ok-pedagogique :"))) okPedagogiqe = temp;
+    if (temp = textToDateIfPossible(getTextField(line,"ok-financier :"))) okFinancier = temp;
+    if (temp = textToDateIfPossible(getTextField(line,"date-EA :"))) dateEA = temp;
+    if (temp = textToDateIfPossible(getTextField(line,"stage-De :"))) stageDe = temp;
+    if (temp = textToDateIfPossible(getTextField(line,"stage-A :"))) stageA = temp;
+    if (temp = processEntryDate(getTextField(line,"Date d'entrée souhaitée :"))) dateEntree = temp;
   } )
 
-  sheet.getRange(row.r,6).setValue ( stEmails );
-  sheet.getRange(row.r,7).setValue ( stPhones );
+  sheet.getRange(row.r,5).setValue ( dateNaissance );
+  sheet.getRange(row.r,6).setValue ( dateEntree );
+  sheet.getRange(row.r,7).setValue ( dateEP );
+  sheet.getRange(row.r,8).setValue ( stageDe );
+  sheet.getRange(row.r,9).setValue ( stageA );
+  sheet.getRange(row.r,10).setValue ( okPedagogique );
+  sheet.getRange(row.r,11).setValue ( dateEA );
+  sheet.getRange(row.r,12).setValue ( okFinancier );
+  sheet.getRange(row.r,13).setValue ( stEmails );
+  sheet.getRange(row.r,14).setValue ( stPhones );
+
+  if (card.due) {
+    sheet.getRange(row.r,15).setValue ( new Date ( card.due ) );
+  }
 
   row.r++;
 }
