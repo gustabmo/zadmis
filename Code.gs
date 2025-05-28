@@ -12,8 +12,14 @@ function zadmisSearchToSend() {
     msgsToSend = thread.getMessages();
     msgsToSend.forEach ( (message) => {
       const description = 
-        message.getDate() + " " + message.getFrom() 
-        + "\n" + message.getPlainBody()
+        "date-EP :\n"
+        +"stage-De :\n"
+        +"stage-A :\n"
+        +"ok-pedagogique :\n"
+        +"date-EA :\n"
+        +"ok-financier :\n"
+        + message.getDate() + " " + message.getFrom() + "\n" 
+        + message.getPlainBody()
       ;
       const info = getAllInfo ( description );
       const cardName = composeCardName ( message, info.prenom, info.nom, info.dobst );
