@@ -18,6 +18,7 @@ function zadmisSearchToSend() {
         +"ok-pedagogique :\n"
         +"date-EA :\n"
         +"ok-financier :\n"
+        +"commentaires :\n"
         +"\n"
         +"date-dossier : " + message.getDate().toISOString() + "\n"
         +"\n"

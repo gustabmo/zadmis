@@ -32,6 +32,7 @@ function writeSummaryListOnSheet() {
       ,"ok péd"
       ,"EA"
       ,"ok fin"
+      ,"commentaires"
       ,"emails"
       ,"téléphones"
       ,"alarme"
@@ -252,6 +253,7 @@ function summarizeOneCard ( card, sheet, row, labels ) {
   let stageDe = "";
   let stageA = "";
   let okFinancier = "";
+  let commentaires = "";
   let temp;
   card.desc.split ( "\n" ).forEach ( (line) => {
     if (temp = processEmail(getTextField(line,"Email :"))) stEmails += (stEmails==""?"":", ") + temp;
@@ -268,6 +270,7 @@ function summarizeOneCard ( card, sheet, row, labels ) {
     if (temp = textToDateIfPossible(getTextField(line,"stage-De :"))) stageDe = temp;
     if (temp = textToDateIfPossible(getTextField(line,"stage-A :"))) stageA = temp;
     if (temp = processEntryDate(getTextField(line,"Date d'entrée souhaitée :"))) dateEntree = temp;
+    if (temp = getTextField(line,"commentaires :")) commentaires = temp;
   } )
 
   col = 5;
@@ -280,6 +283,8 @@ function summarizeOneCard ( card, sheet, row, labels ) {
       .setHorizontalAlignment('center')
     ;
   }
+
+  sheet.getRange(row.r,col++).setValue ( commentaires );
   sheet.getRange(row.r,col++).setValue ( stEmails );
   sheet.getRange(row.r,col++).setValue ( stPhones );
 
