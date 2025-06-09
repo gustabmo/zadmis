@@ -18,7 +18,9 @@ function zadmisSearchToSend() {
         +"ok-pedagogique :\n"
         +"date-EA :\n"
         +"ok-financier :\n"
-        + message.getDate() + " " + message.getFrom() + "\n" 
+        +"\n"
+        +"date-dossier : " + message.getDate().toISOString() + "\n"
+        +"\n"
         + message.getPlainBody()
       ;
       const info = getAllInfo ( description );
