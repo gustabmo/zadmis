@@ -1,4 +1,3 @@
-
 function writeSummaryListOnSheet() {
 
   let error = "";
@@ -20,7 +19,7 @@ function writeSummaryListOnSheet() {
     sheet.getRange(row.r,1).setValue("dernière modif");
     sheet.getRange(row.r,3).setValue("classe");
     sheet.getRange(row.r,4).setValue("élève et date de naissance");
-    sheet.getRange(row.r,5).setValue("naissance");
+    sheet.getRange(row.r,5).setValue("dossier");
     sheet.getRange(row.r,6).setValue("entrée");
     sheet.getRange(row.r,7).setValue("rdv péd");
     sheet.getRange(row.r,8).setValue("stage de");
@@ -121,13 +120,26 @@ function filterPhone ( st ) {
 
 
 function textToDateIfPossible ( st ) {
+  st = st.trim();
+
   if (st == "") return null;
 
-  return st;
+  if (st.match(/^\d\d[.-/]\d\d[.-/]\d\d(\d\d|)$/)) {
+    st = st.substring(6)+"-"+st.substring(3,5)+"-"+st.substring(0,2);
+    if (st.length == 8) {
+      st = "20"+st;
+    }
+  }
 
-  let result = new Date ( st );
-  if (result) {
-    return result;
+  if (st.match(/^\d\d\d\d\.\d\d\.\d\d$/)) {
+    // yyyy.mm.dd is treated as local date, transform it to yyyy-mm-dd to be treated as UTC
+    st = st.substring(0,4)+"-"+st.substring(5,7)+"-"+st.substring(8,10);
+  }
+
+  let d = new Date(st);
+
+  if (d instanceof Date && !isNaN(d)) {
+    return d;
   } else {
     return st;
   }
@@ -194,7 +206,7 @@ function summarizeOneCard ( card, sheet, row, labels ) {
   let stEmails = "";
   let stPhones = "";
   let lastIndicatif = "";
-  let dateNaissance = null;
+  let dateDossier = null;
   let dateEP = "";
   let dateEntree = "";
   let okPedagogique = "";
@@ -208,6 +220,7 @@ function summarizeOneCard ( card, sheet, row, labels ) {
     if (temp = getTextField(line,"Indicatif :")) lastIndicatif = filterPhone(temp);
     if (temp = getTextField(line,"Téléphone mobile :")) stPhones = (stPhones + "  "+lastIndicatif+temp).trim();
     if (temp = textToDateIfPossible(getTextField(line,"date-EP :"))) dateEP = temp;
+    if (temp = textToDateIfPossible(getTextField(line,"date-dossier :"))) dateDossier = temp;
     if (temp = textToDateIfPossible(getTextField(line,"ok-pedagogique :"))) okPedagogiqe = temp;
     if (temp = textToDateIfPossible(getTextField(line,"ok-financier :"))) okFinancier = temp;
     if (temp = textToDateIfPossible(getTextField(line,"date-EA :"))) dateEA = temp;
@@ -216,19 +229,19 @@ function summarizeOneCard ( card, sheet, row, labels ) {
     if (temp = processEntryDate(getTextField(line,"Date d'entrée souhaitée :"))) dateEntree = temp;
   } )
 
-  sheet.getRange(row.r,5).setValue ( dateNaissance );
-  sheet.getRange(row.r,6).setValue ( dateEntree );
-  sheet.getRange(row.r,7).setValue ( dateEP );
-  sheet.getRange(row.r,8).setValue ( stageDe );
-  sheet.getRange(row.r,9).setValue ( stageA );
-  sheet.getRange(row.r,10).setValue ( okPedagogique );
-  sheet.getRange(row.r,11).setValue ( dateEA );
-  sheet.getRange(row.r,12).setValue ( okFinancier );
+  sheet.getRange(row.r,5).setValue ( dateDossier ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+  sheet.getRange(row.r,6).setValue ( dateEntree ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+  sheet.getRange(row.r,7).setValue ( dateEP ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+  sheet.getRange(row.r,8).setValue ( stageDe ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+  sheet.getRange(row.r,9).setValue ( stageA ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+  sheet.getRange(row.r,10).setValue ( okPedagogique ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+  sheet.getRange(row.r,11).setValue ( dateEA ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+  sheet.getRange(row.r,12).setValue ( okFinancier ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
   sheet.getRange(row.r,13).setValue ( stEmails );
   sheet.getRange(row.r,14).setValue ( stPhones );
 
   if (card.due) {
-    sheet.getRange(row.r,15).setValue ( new Date ( card.due ) );
+    sheet.getRange(row.r,15).setValue ( new Date ( card.due ) ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
   }
 
   row.r++;
