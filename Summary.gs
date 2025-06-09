@@ -1,7 +1,9 @@
+
 function writeSummaryListOnSheet() {
 
   let error = "";
   let row = { r : 1 }; // must be object to be passed as reference
+  let col;
   let response = null;
   let sheet = SpreadsheetApp.openById(PRIVATE_GSheets_Summary).getActiveSheet();
   if (sheet == null) {
@@ -16,20 +18,26 @@ function writeSummaryListOnSheet() {
     row.r++;
     row.r++;
 
-    sheet.getRange(row.r,1).setValue("dernière modif");
-    sheet.getRange(row.r,3).setValue("classe");
-    sheet.getRange(row.r,4).setValue("élève et date de naissance");
-    sheet.getRange(row.r,5).setValue("dossier");
-    sheet.getRange(row.r,6).setValue("entrée");
-    sheet.getRange(row.r,7).setValue("rdv péd");
-    sheet.getRange(row.r,8).setValue("stage de");
-    sheet.getRange(row.r,9).setValue("stage à");
-    sheet.getRange(row.r,10).setValue("ok péd");
-    sheet.getRange(row.r,11).setValue("EA");
-    sheet.getRange(row.r,12).setValue("ok fin");
-    sheet.getRange(row.r,13).setValue("emails");
-    sheet.getRange(row.r,14).setValue("téléphones");
-    sheet.getRange(row.r,15).setValue("alarme");
+    col = 1;
+    for (let title of [
+      "dernière modif"
+      ,null
+      ,"classe"
+      ,"élève et date de naissance"
+      ,"dossier"
+      ,"entrée"
+      ,"rdv péd"
+      ,"stage de"
+      ,"stage à"
+      ,"ok péd"
+      ,"EA"
+      ,"ok fin"
+      ,"emails"
+      ,"téléphones"
+      ,"alarme"
+    ]) {
+      sheet.getRange(row.r,col++).setValue(title);
+    }
     row.r++;
     row.r++;
   }
@@ -96,11 +104,24 @@ function writeSummaryListOnSheet() {
 
 function getTextField ( line, header ) {
   line = line.trim();
-  if ((line.length >= 2) && line[0] == "*" && line[line.length-1] == "*") {
+  if ((line.length >= 2) && "*_".includes(line[0]) && "*_".includes(line[line.length-1])) {
     line = line.substr(1,line.length-2);
   }
   if (line.startsWith(header)) {
     return line.substr(header.length).trim();
+  } else {
+    return "";
+  }
+}
+
+
+function ifLineEndsWith ( line, ender ) {
+  line = line.trim();
+  if ((line.length >= 2) && "*_".includes(line[0]) && "*_".includes(line[line.length-1])) {
+    line = line.substr(1,line.length-2);
+  }
+  if (line.endsWith(ender)) {
+    return line.substr(0,line.length-ender.length).trim();
   } else {
     return "";
   }
@@ -146,6 +167,21 @@ function textToDateIfPossible ( st ) {
 }
 
 
+function processEmail ( st ) {
+  let parsed;
+
+  if (
+    (parsed = /\[.*?\]\(mailto:(.*?) ".*"\)/.exec(st)) 
+    &&
+    (parsed.length >= 2)
+  ) {
+    return parsed[1];
+  } else {
+    return st;
+  }
+}
+
+
 function processEntryDate ( st ) {
   if (st=="") return null;
 
@@ -179,6 +215,8 @@ function processEntryDate ( st ) {
 
 
 function summarizeOneCard ( card, sheet, row, labels ) {
+  let col;
+
   sheet.getRange(row.r,1).setValue(new Date ( card.dateLastActivity ));
 
   let stLabels = "";
@@ -216,11 +254,14 @@ function summarizeOneCard ( card, sheet, row, labels ) {
   let okFinancier = "";
   let temp;
   card.desc.split ( "\n" ).forEach ( (line) => {
-    if (temp = getTextField(line,"Email :")) stEmails += (stEmails==""?"":", ") + temp;
+    if (temp = processEmail(getTextField(line,"Email :"))) stEmails += (stEmails==""?"":", ") + temp;
     if (temp = getTextField(line,"Indicatif :")) lastIndicatif = filterPhone(temp);
     if (temp = getTextField(line,"Téléphone mobile :")) stPhones = (stPhones + "  "+lastIndicatif+temp).trim();
     if (temp = textToDateIfPossible(getTextField(line,"date-EP :"))) dateEP = temp;
     if (temp = textToDateIfPossible(getTextField(line,"date-dossier :"))) dateDossier = temp;
+    if (temp = textToDateIfPossible(getTextField(line,"reçu le :"))) dateDossier = temp;
+    if (temp = textToDateIfPossible(ifLineEndsWith(line,"Ecole Rudolf Steiner <info@ersge.ch>"))) dateDossier = temp;
+    if (temp = textToDateIfPossible(ifLineEndsWith(line,"Ecole Rudolf Steiner [info@ersge.ch](mailto:info@ersge.ch \"‌\")"))) dateDossier = temp;
     if (temp = textToDateIfPossible(getTextField(line,"ok-pedagogique :"))) okPedagogiqe = temp;
     if (temp = textToDateIfPossible(getTextField(line,"ok-financier :"))) okFinancier = temp;
     if (temp = textToDateIfPossible(getTextField(line,"date-EA :"))) dateEA = temp;
@@ -229,19 +270,25 @@ function summarizeOneCard ( card, sheet, row, labels ) {
     if (temp = processEntryDate(getTextField(line,"Date d'entrée souhaitée :"))) dateEntree = temp;
   } )
 
-  sheet.getRange(row.r,5).setValue ( dateDossier ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
-  sheet.getRange(row.r,6).setValue ( dateEntree ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
-  sheet.getRange(row.r,7).setValue ( dateEP ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
-  sheet.getRange(row.r,8).setValue ( stageDe ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
-  sheet.getRange(row.r,9).setValue ( stageA ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
-  sheet.getRange(row.r,10).setValue ( okPedagogique ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
-  sheet.getRange(row.r,11).setValue ( dateEA ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
-  sheet.getRange(row.r,12).setValue ( okFinancier ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
-  sheet.getRange(row.r,13).setValue ( stEmails );
-  sheet.getRange(row.r,14).setValue ( stPhones );
+  col = 5;
+  for (let field of [
+    dateDossier, dateEntree, dateEP, stageDe, stageA, okPedagogique, dateEA, okFinancier
+  ]) {
+    sheet.getRange(row.r,col++)
+      .setValue ( field )
+      .setNumberFormat("DD.MM.YYYY")
+      .setHorizontalAlignment('center')
+    ;
+  }
+  sheet.getRange(row.r,col++).setValue ( stEmails );
+  sheet.getRange(row.r,col++).setValue ( stPhones );
 
   if (card.due) {
-    sheet.getRange(row.r,15).setValue ( new Date ( card.due ) ).setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+    sheet.getRange(row.r,col++)
+      .setValue ( new Date ( card.due ) )
+      .setNumberFormat("DD.MM.YYYY")
+      .setHorizontalAlignment('center')
+    ;
   }
 
   row.r++;
