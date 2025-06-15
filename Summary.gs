@@ -264,7 +264,7 @@ function summarizeOneCard ( card, sheet, row, labels ) {
     if (temp = textToDateIfPossible(getTextField(line,"reçu le :"))) dateDossier = temp;
     if (temp = textToDateIfPossible(ifLineEndsWith(line,"Ecole Rudolf Steiner <info@ersge.ch>"))) dateDossier = temp;
     if (temp = textToDateIfPossible(ifLineEndsWith(line,"Ecole Rudolf Steiner [info@ersge.ch](mailto:info@ersge.ch \"‌\")"))) dateDossier = temp;
-    if (temp = textToDateIfPossible(getTextField(line,"ok-pedagogique :"))) okPedagogiqe = temp;
+    if (temp = textToDateIfPossible(getTextField(line,"ok-pedagogique :"))) okPedagogique = temp;
     if (temp = textToDateIfPossible(getTextField(line,"ok-financier :"))) okFinancier = temp;
     if (temp = textToDateIfPossible(getTextField(line,"date-EA :"))) dateEA = temp;
     if (temp = textToDateIfPossible(getTextField(line,"stage-De :"))) stageDe = temp;
