@@ -36,6 +36,8 @@ function writeSummaryListOnSheet() {
       ,"emails"
       ,"téléphones"
       ,"alarme"
+      ,"situation"
+      ,"comment"
     ]) {
       sheet.getRange(row.r,col++).setValue(title);
     }
@@ -64,14 +66,22 @@ function writeSummaryListOnSheet() {
   } else if (response.getResponseCode() != 200) {
     error = response.getContentText();
   } else {
+    listNumber = 0;
     JSON.parse ( response.getContentText() ).forEach ( (list) => {
       if ((error == "") && (list.id != PRIVATE_GSheets_Summary_List_Dont_Show)) {
+        listNumber++;
         sheet.getRange(row.r,4)
           .setValue(list.name)
           .setFontWeight('bold')
         ;
         row.r++;
-        if (!summarizeCards ( sheet, row, labels, list.id )) {
+        if (!summarizeCards ( 
+          sheet, 
+          row, 
+          labels, 
+          list.id, 
+          `${String(listNumber).padStart(2,'0')} ${list.name}` 
+        )) {
           error = "error reading list "+list.name;
         }
       }
@@ -215,7 +225,7 @@ function processEntryDate ( st ) {
 }
 
 
-function summarizeOneCard ( card, sheet, row, labels ) {
+function summarizeOneCard ( card, sheet, row, labels, situation ) {
   let col;
 
   sheet.getRange(row.r,1).setValue(new Date ( card.dateLastActivity ));
@@ -254,8 +264,10 @@ function summarizeOneCard ( card, sheet, row, labels ) {
   let stageA = "";
   let okFinancier = "";
   let commentaires = "";
+  let connulecole = "";
   let temp;
   card.desc.split ( "\n" ).forEach ( (line) => {
+    if (stEmails.includes("carambola") && line.includes("onnu")) console.log("@@ 33 "+line);
     if (temp = processEmail(getTextField(line,"Email :"))) stEmails += (stEmails==""?"":", ") + temp;
     if (temp = getTextField(line,"Indicatif :")) lastIndicatif = filterPhone(temp);
     if (temp = getTextField(line,"Téléphone mobile :")) stPhones = (stPhones + "  "+lastIndicatif+temp).trim();
@@ -271,6 +283,15 @@ function summarizeOneCard ( card, sheet, row, labels ) {
     if (temp = textToDateIfPossible(getTextField(line,"stage-A :"))) stageA = temp;
     if (temp = processEntryDate(getTextField(line,"Date d'entrée souhaitée :"))) dateEntree = temp;
     if (temp = getTextField(line,"commentaires :")) commentaires = temp;
+    if (
+      (temp = getTextField(line,"Comment avez-vous connu l'école ? (plusieurs choix possible) "))
+      ||
+      (temp = getTextField(line,"Comment avez-vous connu l'école ?"))
+      ||
+      (temp = getTextField(line,"*Comment avez-vous connu l'école ?*"))
+      ||
+      (temp = getTextField(line,"_Comment avez-vous connu l'école ?_"))
+    ) connulecole = temp;
   } )
 
   col = 5;
@@ -289,18 +310,22 @@ function summarizeOneCard ( card, sheet, row, labels ) {
   sheet.getRange(row.r,col++).setValue ( stPhones );
 
   if (card.due) {
-    sheet.getRange(row.r,col++)
+    sheet.getRange(row.r,col)
       .setValue ( new Date ( card.due ) )
       .setNumberFormat("DD.MM.YYYY")
       .setHorizontalAlignment('center')
     ;
   }
+  col++;
+
+  sheet.getRange(row.r,col++).setValue ( situation );
+  sheet.getRange(row.r,col++).setValue ( connulecole );
 
   row.r++;
 }
 
 
-function summarizeCards ( sheet, row, labels, listId ) {
+function summarizeCards ( sheet, row, labels, listId, situation ) {
   let result = true;
 
   const cards = UrlFetchApp.fetch(
@@ -316,7 +341,7 @@ function summarizeCards ( sheet, row, labels, listId ) {
   } else {
     JSON.parse ( cards.getContentText() )
       .sort(compareCardsByName)
-      .forEach ( (card) => summarizeOneCard ( card, sheet, row, labels ) )
+      .forEach ( (card) => summarizeOneCard ( card, sheet, row, labels, situation ) )
     ;
     row.r++;
   }
