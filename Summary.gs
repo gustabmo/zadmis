@@ -267,7 +267,6 @@ function summarizeOneCard ( card, sheet, row, labels, situation ) {
   let connulecole = "";
   let temp;
   card.desc.split ( "\n" ).forEach ( (line) => {
-    if (stEmails.includes("carambola") && line.includes("onnu")) console.log("@@ 33 "+line);
     if (temp = processEmail(getTextField(line,"Email :"))) stEmails += (stEmails==""?"":", ") + temp;
     if (temp = getTextField(line,"Indicatif :")) lastIndicatif = filterPhone(temp);
     if (temp = getTextField(line,"Téléphone mobile :")) stPhones = (stPhones + "  "+lastIndicatif+temp).trim();
