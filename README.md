@@ -26,5 +26,5 @@ Once installed and configured, if you wish to post to Trello some old emails, yo
 ----
 History:
 - 2025-03-23 first working version
-- 2025-03-29 Summaru.gs with writeSummaryToSheet() function
+- 2025-03-29 Summary.gs with writeSummaryToSheet() function
 - 2025-06-09 various details, specially on Summary.gs, most of which are very specific to my use case
