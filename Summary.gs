@@ -2,24 +2,31 @@
 function writeSummaryListOnSheet() {
 
   let error = "";
-  let row = { r : 1 }; // must be object to be passed as reference
   let col;
   let response = null;
   let sheet = SpreadsheetApp.openById(PRIVATE_GSheets_Summary).getActiveSheet();
+  let newValues = []; // all the values of all the cells
   if (sheet == null) {
     error = "google sheet not found";
   }
 
   if (error == "") {
     sheet.clear();
+  }
 
-    sheet.getRange(row.r,1).setValue(new Date(Date.now()));
-    sheet.getRange(row.r,3).setValue("dernière mise à jour");
-    row.r++;
-    row.r++;
+  if (error == "") {
+    newValues.push ( [
+      new Date(Date.now()),
+      null,
+      "dernière mise à jour",
+      "  @@@  J'ESSAIE DES MODIFICATIONS SUR CE FICHIER - GUSTAVO  @@@"
+    ] );
 
-    col = 1;
-    for (let title of [
+    newValues.push ( [] );
+  }
+
+  if (error == "") {
+    newValues.push ( [
       "dernière modif"
       ,null
       ,"classe"
@@ -38,11 +45,9 @@ function writeSummaryListOnSheet() {
       ,"alarme"
       ,"situation"
       ,"comment"
-    ]) {
-      sheet.getRange(row.r,col++).setValue(title);
-    }
-    row.r++;
-    row.r++;
+    ] );
+
+    newValues.push ( [] );
   }
 
   labels = getBoardLabels();
@@ -70,14 +75,15 @@ function writeSummaryListOnSheet() {
     JSON.parse ( response.getContentText() ).forEach ( (list) => {
       if ((error == "") && (list.id != PRIVATE_GSheets_Summary_List_Dont_Show)) {
         listNumber++;
-        sheet.getRange(row.r,4)
-          .setValue(list.name)
-          .setFontWeight('bold')
-        ;
-        row.r++;
+        newValues.push ( [
+          null,
+          null,
+          null,
+          `=== ${list.name} ===`
+        ] );
         if (!summarizeCards ( 
           sheet, 
-          row, 
+          newValues,
           labels, 
           list.id, 
           `${String(listNumber).padStart(2,'0')} ${list.name}` 
@@ -88,28 +94,43 @@ function writeSummaryListOnSheet() {
     } );
   }
 
+
+  @@@@ continuer ici....
+
   if (error == "") {
-    sheet.getRange(row.r,4)
-      .setValue ( "---")
-      .setFontWeight('normal')
-    ;
-    row.r++;
-    row.r++;
-    if (!summarizeLabels ( sheet, row, labels )) {
+    newValues.push ( [null,null,null,"---"] );
+    newValues.push ( [] );
+    if (!summarizeLabels ( sheet, newValues, labels )) {
       error = "error listing labels";
     }
   }
 
+  if (error == "") {
+    newValues.push ( [null,null,null,"---"] );
+  }
+
   if (error != "") {
     Logger.log ( "error: "+error );
-  }
-  if (sheet != null) {
-    sheet.getRange(row.r,4)
-      .setValue ( error==""? "---" : "error: "+error )
-      .setFontWeight('normal')
+    if (sheet != null) {
+      sheet.getRange(1,4)
+        .setValue ( error==""? "---" : "error: "+error )
+        .setFontWeight('bold')
+      ;
+    }  
+  } else {
+    sheet.getRange(1,1,newValues.length,maxLineLength(newValues))
+      .setValues ( newValues )
     ;
-    row.r++;
+  }
+}
+
+
+function maxLineLength ( newValues ) {
+  let max = 1;
+  for (line in newValues) {
+    max = Math.max ( max, line.length );
   }  
+  return max;
 }
 
 
@@ -225,18 +246,20 @@ function processEntryDate ( st ) {
 }
 
 
-function summarizeOneCard ( card, sheet, row, labels, situation ) {
-  let col;
+function summarizeOneCard ( card, sheet, newValues, labels, situation ) {
+  let line = [];
 
-  sheet.getRange(row.r,1).setValue(new Date ( card.dateLastActivity ));
+  line.push ( new Date ( card.dateLastActivity ) );
+  line.push ( null );
 
   let stLabels = "";
   card.idLabels.forEach ( (idLabel) => 
     stLabels += getLabelName ( idLabel, labels ) + " " 
   );
-  sheet.getRange(row.r,3).setValue ( stLabels.trim() );
+  line.push ( stLabels.trim() );
 
-  sheet.getRange(row.r,4)
+  line.push ( null );
+  sheet.getRange(newValues.length+1,4)
     .setRichTextValue(
       SpreadsheetApp.newRichTextValue()
         .setText(card.name)
@@ -249,7 +272,6 @@ function summarizeOneCard ( card, sheet, row, labels, situation ) {
         )
         .build()
     )
-    .setFontWeight('normal')
   ;
 
   let stEmails = "";
@@ -293,38 +315,20 @@ function summarizeOneCard ( card, sheet, row, labels, situation ) {
     ) connulecole = temp;
   } )
 
-  col = 5;
   for (let field of [
-    dateDossier, dateEntree, dateEP, stageDe, stageA, okPedagogique, dateEA, okFinancier
+    dateDossier, dateEntree, dateEP, stageDe, stageA, okPedagogique, dateEA, okFinancier, 
+    commentaires, stEmails, stPhones, 
+    card,due ? new Date ( card.due ) : null,
+    situation, connuelecole
   ]) {
-    sheet.getRange(row.r,col++)
-      .setValue ( field )
-      .setNumberFormat("DD.MM.YYYY")
-      .setHorizontalAlignment('center')
-    ;
+    line.push ( field );
   }
 
-  sheet.getRange(row.r,col++).setValue ( commentaires );
-  sheet.getRange(row.r,col++).setValue ( stEmails );
-  sheet.getRange(row.r,col++).setValue ( stPhones );
-
-  if (card.due) {
-    sheet.getRange(row.r,col)
-      .setValue ( new Date ( card.due ) )
-      .setNumberFormat("DD.MM.YYYY")
-      .setHorizontalAlignment('center')
-    ;
-  }
-  col++;
-
-  sheet.getRange(row.r,col++).setValue ( situation );
-  sheet.getRange(row.r,col++).setValue ( connulecole );
-
-  row.r++;
+  newValues.push ( line );
 }
 
 
-function summarizeCards ( sheet, row, labels, listId, situation ) {
+function summarizeCards ( sheet, newValues, labels, listId, situation ) {
   let result = true;
 
   const cards = UrlFetchApp.fetch(
@@ -340,9 +344,8 @@ function summarizeCards ( sheet, row, labels, listId, situation ) {
   } else {
     JSON.parse ( cards.getContentText() )
       .sort(compareCardsByName)
-      .forEach ( (card) => summarizeOneCard ( card, sheet, row, labels, situation ) )
+      .forEach ( (card) => summarizeOneCard ( card, sheet, newValues, labels, situation ) )
     ;
-    row.r++;
   }
 
   return result;
@@ -378,24 +381,17 @@ function compareLabels ( a, b ) {
 }
 
 
-function summarizeLabels ( sheet, row, labels ) {
+function summarizeLabels ( newValues, labels ) {
   labels
     .sort(compareLabels)
     .forEach ( (label) => {
-      sheet.getRange(row.r,3)
-        .setRichTextValue(
-          SpreadsheetApp.newRichTextValue()
-            .setText(label.name)
-            .setLinkUrl(
-              "https://trello.com/b/WLDAl4MM/admissions?filter=label:"
-              +encodeURI(label.name)
-            )
-            .build()
-        )
-      ;
-      row.r++;
+      newValues.push ( [
+        null, null,
+        label.name,
+        `https://trello.com/b/WLDAl4MM/admissions?filter=label:${encodeURI(label.name)}`
+      ] );
     })
   ;
-  row.r++;
+  newValues.push ( [] );
   return true;
 }
