@@ -18,8 +18,7 @@ function writeSummaryListOnSheet() {
     newValues.push ( [
       new Date(Date.now()),
       null,
-      "dernière mise à jour",
-      "  @@@  J'ESSAIE DES MODIFICATIONS SUR CE FICHIER - GUSTAVO  @@@"
+      "'<=== dernière mise à jour"
     ] );
 
     newValues.push ( [] );
@@ -42,9 +41,9 @@ function writeSummaryListOnSheet() {
       ,"commentaires"
       ,"emails"
       ,"téléphones"
-      ,"alarme"
+      ,null
       ,"situation"
-      ,"comment"
+      ,"connu l'école"
     ] );
 
     newValues.push ( [] );
@@ -79,10 +78,9 @@ function writeSummaryListOnSheet() {
           null,
           null,
           null,
-          `=== ${list.name} ===`
+          `'=== ${list.name} ===`
         ] );
         if (!summarizeCards ( 
-          sheet, 
           newValues,
           labels, 
           list.id, 
@@ -90,17 +88,15 @@ function writeSummaryListOnSheet() {
         )) {
           error = "error reading list "+list.name;
         }
+        newValues.push([]);
       }
     } );
   }
 
-
-  @@@@ continuer ici....
-
   if (error == "") {
     newValues.push ( [null,null,null,"---"] );
     newValues.push ( [] );
-    if (!summarizeLabels ( sheet, newValues, labels )) {
+    if (!summarizeLabels ( newValues, labels )) {
       error = "error listing labels";
     }
   }
@@ -109,26 +105,36 @@ function writeSummaryListOnSheet() {
     newValues.push ( [null,null,null,"---"] );
   }
 
+  if (error == "") {
+    sheet.getRange ( 1, 1, newValues.length, standardizeLineLengths(newValues) )
+      .setValues ( newValues )
+    ;
+    sheet.getRange("A:A").setNumberFormat("DD.MM.YYYY hh:mm").setHorizontalAlignment('center');
+    sheet.getRange("E:L").setNumberFormat("DD.MM.YYYY").setHorizontalAlignment('center');
+  }
+
   if (error != "") {
     Logger.log ( "error: "+error );
     if (sheet != null) {
       sheet.getRange(1,4)
-        .setValue ( error==""? "---" : "error: "+error )
+        .setValue ( "error: "+error )
         .setFontWeight('bold')
       ;
-    }  
-  } else {
-    sheet.getRange(1,1,newValues.length,maxLineLength(newValues))
-      .setValues ( newValues )
-    ;
+    } 
   }
 }
 
 
-function maxLineLength ( newValues ) {
-  let max = 1;
-  for (line in newValues) {
+function standardizeLineLengths ( newValues ) {
+  let max = 0;
+  let line;
+  for (line of newValues) {
     max = Math.max ( max, line.length );
+  }  
+  for (line of newValues) {
+    while (line.length < max) {
+      line.push ( null );
+    }
   }  
   return max;
 }
@@ -176,6 +182,13 @@ function textToDateIfPossible ( st ) {
   st = st.trim();
 
   if (st == "") return null;
+
+  stDateSpecifique = "Date spécifique";
+  if (st.startsWith(stDateSpecifique)) {
+    let bakst = st;
+    st = st.slice ( stDateSpecifique.length );
+    console.log ( `@@ ${bakst} -> ${st}` );
+  } 
 
   if (st.match(/^\d\d[.-/]\d\d[.-/]\d\d(\d\d|)$/)) {
     st = st.substring(6)+"-"+st.substring(3,5)+"-"+st.substring(0,2);
@@ -246,11 +259,12 @@ function processEntryDate ( st ) {
 }
 
 
-function summarizeOneCard ( card, sheet, newValues, labels, situation ) {
+function summarizeOneCard ( card, newValues, labels, situation ) {
   let line = [];
 
   line.push ( new Date ( card.dateLastActivity ) );
-  line.push ( null );
+
+  line.push ( card.url );
 
   let stLabels = "";
   card.idLabels.forEach ( (idLabel) => 
@@ -258,21 +272,7 @@ function summarizeOneCard ( card, sheet, newValues, labels, situation ) {
   );
   line.push ( stLabels.trim() );
 
-  line.push ( null );
-  sheet.getRange(newValues.length+1,4)
-    .setRichTextValue(
-      SpreadsheetApp.newRichTextValue()
-        .setText(card.name)
-        .setLinkUrl(card.url)
-        .setTextStyle(
-          SpreadsheetApp.newTextStyle()
-            .setForegroundColor("black")
-            .setUnderline(false)
-            .build()
-        )
-        .build()
-    )
-  ;
+  line.push ( card.name );
 
   let stEmails = "";
   let stPhones = "";
@@ -318,8 +318,8 @@ function summarizeOneCard ( card, sheet, newValues, labels, situation ) {
   for (let field of [
     dateDossier, dateEntree, dateEP, stageDe, stageA, okPedagogique, dateEA, okFinancier, 
     commentaires, stEmails, stPhones, 
-    card,due ? new Date ( card.due ) : null,
-    situation, connuelecole
+    null,
+    situation, connulecole
   ]) {
     line.push ( field );
   }
@@ -328,7 +328,7 @@ function summarizeOneCard ( card, sheet, newValues, labels, situation ) {
 }
 
 
-function summarizeCards ( sheet, newValues, labels, listId, situation ) {
+function summarizeCards ( newValues, labels, listId, situation ) {
   let result = true;
 
   const cards = UrlFetchApp.fetch(
@@ -344,7 +344,7 @@ function summarizeCards ( sheet, newValues, labels, listId, situation ) {
   } else {
     JSON.parse ( cards.getContentText() )
       .sort(compareCardsByName)
-      .forEach ( (card) => summarizeOneCard ( card, sheet, newValues, labels, situation ) )
+      .forEach ( (card) => summarizeOneCard ( card, newValues, labels, situation ) )
     ;
   }
 
