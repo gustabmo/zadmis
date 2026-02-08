@@ -183,13 +183,6 @@ function textToDateIfPossible ( st ) {
 
   if (st == "") return null;
 
-  stDateSpecifique = "Date spécifique";
-  if (st.startsWith(stDateSpecifique)) {
-    let bakst = st;
-    st = st.slice ( stDateSpecifique.length );
-    console.log ( `@@ ${bakst} -> ${st}` );
-  } 
-
   if (st.match(/^\d\d[.-/]\d\d[.-/]\d\d(\d\d|)$/)) {
     st = st.substring(6)+"-"+st.substring(3,5)+"-"+st.substring(0,2);
     if (st.length == 8) {
@@ -235,6 +228,8 @@ function processEntryDate ( st ) {
   if (st=="lundi 1 Sep 2025 12h00") st = "Rentrée 2025";
 
   if (st=="lundi 17 Août 2026 12h00") st = "Rentrée 2026";
+
+  st = st.replace ( "Date spécifique", "" );
 
   st = st.replace ( "Rentrée Août ", "Rentrée ");
 
