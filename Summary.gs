@@ -44,6 +44,8 @@ function writeSummaryListOnSheet() {
       ,null
       ,"situation"
       ,"connu l'école"
+      ,"parent"
+      ,"adresse"
     ] );
 
     newValues.push ( [] );
@@ -282,13 +284,22 @@ function summarizeOneCard ( card, newValues, labels, situation ) {
   let okFinancier = "";
   let commentaires = "";
   let connulecole = "";
+  let parentPrenom = "";
+  let parentNom = "";
+  let parentAdresse = "";
+  let isParentData = false;
+  let lastLineWasAddress = false;
   let temp;
   card.desc.split ( "\n" ).forEach ( (line) => {
     if (temp = processEmail(getTextField(line,"Email :"))) stEmails += (stEmails==""?"":", ") + temp;
     if (temp = getTextField(line,"Indicatif :")) lastIndicatif = filterPhone(temp);
     if (temp = getTextField(line,"Téléphone mobile :")) stPhones = (stPhones + "  "+lastIndicatif+temp).trim();
     if (temp = textToDateIfPossible(getTextField(line,"date-EP :"))) dateEP = temp;
-    if (temp = textToDateIfPossible(getTextField(line,"date-dossier :"))) dateDossier = temp;
+    if (
+      (temp = textToDateIfPossible(getTextField(line,"date-dossier :")))
+      ||
+      (temp = textToDateIfPossible(getTextField(line,"Dossier :")))
+    ) dateDossier = temp;
     if (temp = textToDateIfPossible(getTextField(line,"reçu le :"))) dateDossier = temp;
     if (temp = textToDateIfPossible(ifLineEndsWith(line,"Ecole Rudolf Steiner <info@ersge.ch>"))) dateDossier = temp;
     if (temp = textToDateIfPossible(ifLineEndsWith(line,"Ecole Rudolf Steiner [info@ersge.ch](mailto:info@ersge.ch \"‌\")"))) dateDossier = temp;
@@ -308,16 +319,38 @@ function summarizeOneCard ( card, newValues, labels, situation ) {
       ||
       (temp = getTextField(line,"_Comment avez-vous connu l'école ?_"))
     ) connulecole = temp;
+    if ((line.includes("PARENT 1") && line.includes("PARENT 2"))) isParentData = true;
+    if (isParentData && (temp = getTextField(line,"Prénom : ")) && parentPrenom=="") parentPrenom = temp;
+    if (isParentData && (temp = getTextField(line,"Nom : ")) && parentNom=="") parentNom = temp;
+    if (lastLineWasAddress) {
+      if (line.includes("Pays :")) {
+        parentAdresse = cleanUpAddress ( parentAdresse+" "+line );
+      }
+      lastLineWasAddress = false;
+    }
+    if (
+      isParentData 
+      && 
+      (
+        (temp = getTextField(line,"N°: ")) 
+        ||
+        (temp = getTextField(line,"Adresse : ")) 
+      )
+      && 
+      parentAdresse==""
+    ) {
+      parentAdresse = cleanUpAddress ( temp );
+      lastLineWasAddress = true;
+    }
   } )
 
-  for (let field of [
-    dateDossier, dateEntree, dateEP, stageDe, stageA, okPedagogique, dateEA, okFinancier, 
-    commentaires, stEmails, stPhones, 
-    null,
-    situation, connulecole
-  ]) {
-    line.push ( field );
-  }
+  line = line.concat ( [
+    dateDossier, dateEntree, dateEP, stageDe, stageA, okPedagogique, dateEA, okFinancier
+    , commentaires, stEmails, stPhones
+    , null
+    , situation, connulecole
+    , parentPrenom+" "+parentNom, parentAdresse
+  ] );
 
   newValues.push ( line );
 }
@@ -344,6 +377,20 @@ function summarizeCards ( newValues, labels, listId, situation ) {
   }
 
   return result;
+}
+
+
+function cleanUpAddress ( st ) {
+  st = st.replace ( "Rue :", "" );
+  st = st.replace ( "Code postal :", "" );
+  st = st.replace ( "Ville :", "" );
+  st = st.replace ( "Pays :", "" );
+  let was;
+  do {
+    was = st;
+    st = st.replace ( "  ", " " );
+  } while (was != st);
+  return st.trim();
 }
 
 
