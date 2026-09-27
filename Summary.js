@@ -27,7 +27,7 @@ function writeSummaryListOnSheet() {
   if (error == "") {
     newValues.push ( [
       "dernière modif"
-      ,null
+      ,"trello"
       ,"classe"
       ,"élève et date de naissance"
       ,"dossier"
@@ -41,7 +41,7 @@ function writeSummaryListOnSheet() {
       ,"commentaires"
       ,"emails"
       ,"téléphones"
-      ,null
+      ,"email élève"
       ,"situation"
       ,"connu l'école"
       ,"parent"
@@ -272,6 +272,7 @@ function summarizeOneCard ( card, newValues, labels, situation ) {
   line.push ( card.name );
 
   let stEmails = "";
+  let stEmailEleve = "";
   let stPhones = "";
   let lastIndicatif = "";
   let dateDossier = null;
@@ -291,6 +292,7 @@ function summarizeOneCard ( card, newValues, labels, situation ) {
   let lastLineWasAddress = false;
   let temp;
   card.desc.split ( "\n" ).forEach ( (line) => {
+    if (temp = processEmail(getTextField(line,"Email de l'élève :"))) stEmailEleve += (stEmailEleve==""?"":", ") + temp;
     if (temp = processEmail(getTextField(line,"Email :"))) stEmails += (stEmails==""?"":", ") + temp;
     if (temp = getTextField(line,"Indicatif :")) lastIndicatif = filterPhone(temp);
     if (temp = getTextField(line,"Téléphone mobile :")) stPhones = (stPhones + "  "+lastIndicatif+temp).trim();
@@ -346,8 +348,7 @@ function summarizeOneCard ( card, newValues, labels, situation ) {
 
   line = line.concat ( [
     dateDossier, dateEntree, dateEP, stageDe, stageA, okPedagogique, dateEA, okFinancier
-    , commentaires, stEmails, stPhones
-    , null
+    , commentaires, stEmails, stPhones, stEmailEleve
     , situation, connulecole
     , parentPrenom+" "+parentNom, parentAdresse
   ] );
@@ -428,9 +429,9 @@ function summarizeLabels ( newValues, labels ) {
     .sort(compareLabels)
     .forEach ( (label) => {
       newValues.push ( [
-        null, null,
-        label.name,
-        `https://trello.com/b/WLDAl4MM/admissions?filter=label:${encodeURI(label.name)}`
+        null,
+        `https://trello.com/b/WLDAl4MM/admissions?filter=label:${encodeURI(label.name)}`,
+        label.name
       ] );
     })
   ;
