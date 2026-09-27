@@ -2,3 +2,4 @@ private.*
 .DS_Store
 .clasprc.json
 .clasp.json
+appsscript.json
