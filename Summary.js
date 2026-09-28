@@ -56,7 +56,8 @@ function writeSummaryListOnSheet() {
   if (error == "") {
     response = UrlFetchApp.fetch(
       "https://api.trello.com/1/boards/"+PRIVATE_Trello_idBoard
-      +"/lists?key="+PRIVATE_Trello_APIkey
+      +"/lists?filter=all&cards=all"
+      +"&key="+PRIVATE_Trello_APIkey
       +"&token="+PRIVATE_Trello_APItoken,
       {
         muteHttpExceptions: true,
@@ -76,19 +77,21 @@ function writeSummaryListOnSheet() {
     JSON.parse ( response.getContentText() ).forEach ( (list) => {
       if ((error == "") && (list.id != PRIVATE_GSheets_Summary_List_Dont_Show)) {
         listNumber++;
+        let listName = list.name + ( list.closed ? ' **Archived**' : '' );
         newValues.push ( [
           null,
           null,
           null,
-          `'=== ${list.name} ===`
+          `'=== ${listName} ===`
         ] );
         if (!summarizeCards ( 
           newValues,
           labels, 
           list.id, 
-          `${String(listNumber).padStart(2,'0')} ${list.name}` 
+          `${String(listNumber).padStart(2,'0')} ${listName}`,
+          list.cards 
         )) {
-          error = "error reading list "+list.name;
+          error = "error reading list "+listName;
         }
         newValues.push([]);
       }
@@ -269,7 +272,7 @@ function summarizeOneCard ( card, newValues, labels, situation ) {
   );
   line.push ( stLabels.trim() );
 
-  line.push ( card.name );
+  line.push ( card.name + ( card.closed ? ' **Archived**' : '' ) );
 
   let stEmails = "";
   let stEmailEleve = "";
@@ -357,27 +360,13 @@ function summarizeOneCard ( card, newValues, labels, situation ) {
 }
 
 
-function summarizeCards ( newValues, labels, listId, situation ) {
-  let result = true;
+function summarizeCards ( newValues, labels, listId, situation, cards ) {
+  cards      
+    .sort(compareCardsByName)
+    .forEach ( (card) => summarizeOneCard ( card, newValues, labels, situation ) )
+  ;
 
-  const cards = UrlFetchApp.fetch(
-    "https://api.trello.com/1/lists/"+listId
-    +"/cards?key="+PRIVATE_Trello_APIkey
-    +"&token="+PRIVATE_Trello_APItoken,
-    {
-      muteHttpExceptions: true,
-    }
-  );
-  if ((cards == null) || (cards.getResponseCode() != 200)) {
-    result = false;
-  } else {
-    JSON.parse ( cards.getContentText() )
-      .sort(compareCardsByName)
-      .forEach ( (card) => summarizeOneCard ( card, newValues, labels, situation ) )
-    ;
-  }
-
-  return result;
+  return true;
 }
 
 
